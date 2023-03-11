@@ -91,7 +91,7 @@ class ResidualBlock(nn.Module):
         self.affine = affine
         self.inplace_activation = inplace_activation
 
-        self.res_block = nn.Sequential(
+        self.georgios_block = nn.Sequential(
             nn.ReLU(self.inplace_activation),
             WSConv2d(self.channels, self.channels, self.kernel_size,
                      self.stride, self.padding, bias=self.bias, eps=self.eps),
@@ -103,7 +103,7 @@ class ResidualBlock(nn.Module):
         )
 
     def forward(self, x):
-        return x + self.res_block(x)
+        return x + self.georgios_block(x)
 
 class DataFKImageNetwork(nn.Module):
     """Data to image network with f-k migration as network layer.
