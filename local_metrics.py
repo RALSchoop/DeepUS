@@ -1,13 +1,13 @@
-"""Evaluate resolution."""
+"""Evaluate local evaluation metrics."""
 
-import typing
+from typing import Tuple
 import torch
 import numpy as np
 import deepus
 import matplotlib.pyplot as plt
 import torch.utils.data
 import torchvision
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Ellipse
 import evaluation as eva
 from os.path import join
 
@@ -28,12 +28,15 @@ deepus_dataset = deepus.UltrasoundDataset(
             [torchvision.transforms.ToTensor()]))
 h_data = deepus_dataset.load_header()
 
-# Sample choice.
-# Indices 6 to 10 are wire samples for resolution evaluation from a 'high'
-# attenuation region with attenuation coefficient of 0.95 dB/(cm MHz).
-# Indices 26 to 30 are wire samples for resolution evaluation from a 'low'
-# attentuation region with attenuation coefficient of 0.70 dB/(cm MHz).
-idx = 6
+# Sample choice
+# Indices 1 to 5 contain hypoechoic regions, indices 11 to 15 have
+# circular regions of +3 and +6 dB, and indices 16 to 20 have circular
+# regions of -3 and -6 dB from a region with 'low' attentuation coefficient
+# of 0.70 dB/(cm MHz).
+# Indices 21 to 25, 31 to 35, and 36 to 40 contain the same type of
+# regions respectively, but from a region with 'high' attenuation
+# coefficient of 0.95 dB/(cm MHz).
+idx = 22
 
 # Load data of specified sample.
 input, target = deepus_dataset[idx]
@@ -64,24 +67,23 @@ msd_paths = [join(runs_root, 'gpu_s_runs', 'deepus_experiment_s1',
 model_outputs = [eva.model_output(model, msd_path, input)
                  for msd_path in msd_paths]
 
-# Specify rectangles for resolution evaluation.
-# A different rectangle can be defined for axial and lateral direction,
-# as well as the input, model outputs and target images.
-input_roi_ax = Rectangle((65, 730), 12, 85)
-models_roi_ax = input_roi_ax
-# Too much noise and too little signal over the area from wire for fair
-# comparison of target using same Rectangle as input with Gaussian fit
-# for resolution PSF estimation. Hence tailored ROI for target.
-target_roi_ax = Rectangle((68, 730), 6, 75)
-
-input_roi_lat = Rectangle((65, 730), 12, 85)
-models_roi_lat = input_roi_lat
-target_roi_lat = input_roi_lat
+# Specify circle and ring with common center for evaluation of local metrics.
+# Specify center as an ij coordinate tuple, that is axial coordinate first.
+# Given in pixel coordinates.
+c_ij = (597, 62)
+# Radius of circle corresponding to 'contrast' region for evaluation metrics.
+# Given in mm.
+r1 = 1.3
+# Radii of ring corresponding to 'background' region for evaluation metrics.
+# Given in mm.
+r2 = (2.9, 4.0)
 
 # Function for display.
 def display_img(img: torch.Tensor,
                 title: str = '',
-                roi: Rectangle = None,
+                c_ij: Tuple[float, float] = None,
+                r1: float = None,
+                r2: Tuple[float, float] = None,
                 physical_units = True,
                 pdeltaz: float = 2.4640e-2,
                 pdeltax: float = 1.9530e-1) -> None:
@@ -99,13 +101,19 @@ def display_img(img: torch.Tensor,
         axs.set_yticks(np.round(np.array([0, 5, 10, 15, 20, 25, 30, 35])
                                 / pdeltaz), ['0', '5', '10', '15', '20',
                                              '25', '30', '35'])
-    if roi is not None:
-        axs.add_patch(Rectangle(roi.get_xy(), roi.get_width(),
-                      roi.get_height(), facecolor='none', edgecolor='g'))
-
-# Set flag if you want to see all the images.
-# Use display_img() roi argument to experiment and find the desired ROI.
-# Passing physical_units as false can help finding the exact pixel coordinates.
+    if c_ij is not None:
+        c_xy = (c_ij[1], c_ij[0])
+        if r1 is not None:
+            axs.add_patch(Ellipse(c_xy, 2*r1/pdeltax, 2*r1/pdeltaz,
+                                facecolor='none', edgecolor='g'))
+        if r2 is not None:
+            axs.add_patch(Ellipse(c_xy, 2*r2[0]/pdeltax, 2*r2[0]/pdeltaz,
+                                facecolor='none', edgecolor='r'))
+            axs.add_patch(Ellipse(c_xy, 2*r2[1]/pdeltax, 2*r2[1]/pdeltaz,
+                                facecolor='none', edgecolor='r'))
+        
+# Set flag if you want to see all images.
+# Use display_img() c_xy, r1 and r2 arguments to check the desired ROI.
 display = True
 if display:
     display_img(input_img, 'Input')
@@ -113,19 +121,41 @@ if display:
     for i, model_img in enumerate(model_outputs):
         display_img(model_img, f'Model Output {i}')
 
-# Resolution evaluation in terms of PSF estimation.
-# Returned as (Axial FWHM, Lateral FWHM).
-input_psf = eva.psf(input_img, input_roi_ax, input_roi_lat)
-target_psf = eva.psf(target, target_roi_ax, target_roi_lat)
-model_psfs = [eva.psf(model_img, models_roi_ax, models_roi_lat)
+# Evaluation metrics: contrast to noise ratio (CNR)
+input_cnr = eva.cnr(input_img, c_ij=c_ij, r1=r1, r2=r2)
+target_cnr = eva.cnr(target, c_ij=c_ij, r1=r1, r2=r2)
+model_cnrs = [eva.cnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
               for model_img in model_outputs]
 
-# Now you can save input_psf, target_psf, and model_psfs to your liking.
-# Or modify this script and use them in whatever way you'd like.
+# Evaluation metrics: contrast ratio (CR)
+input_cr = eva.cr(input_img, c_ij=c_ij, r1=r1, r2=r2)
+target_cr = eva.cr(target, c_ij=c_ij, r1=r1, r2=r2)
+model_crs = [eva.cr(model_img, c_ij=c_ij, r1=r1, r2=r2)
+             for model_img in model_outputs]
 
-print(input_psf)
-print(target_psf)
-print(model_psfs)
+# Evaluation metrics: generalized contrast to noise ratio (gCNR)
+input_gcnr = eva.gcnr(input_img, c_ij=c_ij, r1=r1, r2=r2)
+target_gcnr = eva.gcnr(target, c_ij=c_ij, r1=r1, r2=r2)
+model_gcnrs = [eva.gcnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
+               for model_img in model_outputs]
+
+# Now you can save the evaluation metrics' results to your liking.
+# Or add to this script to use them in whatever way you'd like.
+
+print('CNR:')
+print(f'Input CNR: {input_cnr}')
+print(f'Target CNR: {target_cnr}')
+print(f'Model CNRs: {model_cnrs}')
+print() # Just for '\n'.
+print('CR:')
+print(f'Input CR: {input_cr}')
+print(f'Target CR: {target_cr}')
+print(f'Model CRs: {model_crs}')
+print() # Just for '\n'.
+print('gCNR:')
+print(f'Input gCNR: {input_gcnr}')
+print(f'Target gCNR: {target_gcnr}')
+print(f'Model gCNRs: {model_gcnrs}')
 
 if display:
     # Locks further code execution so show last.
