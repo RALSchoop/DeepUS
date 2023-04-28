@@ -8,9 +8,13 @@ Author: Ryan A.L. Schoop
 from os import makedirs
 from os.path import join
 from glob import glob
+from time import time
+from datetime import timedelta
 import numpy as np
 from scipy.io import loadmat
 from h5py import File
+from torch import from_numpy, real
+from deepus import torch_fkmig, torch_image_formation
 
 # Script assumes that the data is stored in 'ExperimentalData/CIRS073_RUMC' or
 # 'ExperimentalData/CIRS040GSE/' within some storage_path root directory.
@@ -68,8 +72,8 @@ else:
     # Would check this clause one time, but not that important because only
     # 1 angle and 75 angles are used in my project.
 
-usdata = usdata[:, :, ang_ind]
-usheader.xmitAngles = np.squeeze(usheader.xmitAngles)[ang_ind]
+usdata = np.atleast_3d(usdata[:, :, ang_ind])
+usheader.xmitAngles = np.atleast_1d(np.squeeze(usheader.xmitAngles)[ang_ind])
 usheader.xmitDelay = np.squeeze(usheader.xmitDelay)[ang_ind, :]
 usheader.xmitFocus = np.squeeze(usheader.xmitFocus)[ang_ind]
 usheader.xmitApodFunction = np.squeeze(usheader.xmitApodFunction)[ang_ind, :]
@@ -80,3 +84,63 @@ sos_bgn = np.squeeze(usheader.c)
 lens_delay = 96
 
 # Main loop
+for i, data_file in enumerate(data_files):
+    print(f'Reconstructing data file index {i}...')
+    rc_time_start = time()
+
+    with File(data_file) as f:
+        usdata = np.swapaxes(np.squeeze(np.array(f.get('USDATA'))),
+                            0, 2).astype(np.float64)
+        usdata = np.atleast_3d(usdata[:, :, ang_ind])
+    
+    # Correct general delay, i.e. lens correction
+    usdata = usdata[lens_delay:, :, :]
+
+    # Correct angle dependent delay
+    n_t = usdata.shape[0]
+    dt = 1 / np.squeeze(usheader.fs)
+    delay = np.abs((n_ele - 1) / 2 * np.squeeze(usheader.pitch) * np.sin(np.deg2rad(usheader.xmitAngles)) / sos_bgn)
+    delay_ind = np.floor(delay / dt).astype(int)
+    for i_ang in range(n_ang_ss):
+        # This checks out regarding the indices wrt. to matlab code I think.
+        usdata[:(n_t - delay_ind[i_ang]), :, i_ang] = (
+            usdata[delay_ind[i_ang]:, :, i_ang])
+        usdata[(n_t - delay_ind[i_ang]):, :, i_ang] = 0
+    
+    # Correct channel 125
+    usdata[:, 125, :] = 2 * usdata[:, 125, :]
+
+    # Set up fk-migration and run it.
+    fk_para = {
+        'pitch': np.squeeze(usheader.pitch).astype(np.float32),
+        'fs': np.squeeze(usheader.fs).astype(np.float32),
+        'tx_angle': np.deg2rad(usheader.xmitAngles).astype(np.float32),
+        'c': sos_bgn.astype(np.float32),
+        't0': 0
+    }
+    # I don't think this has been checked for case of more angles than 1.
+    # TODO have a working version for 75 angles.
+    img_fkmig = torch_fkmig(from_numpy(usdata.squeeze()), fk_para)
+
+    # Image post processing
+    img_pp = torch_image_formation(real(img_fkmig), -70)
+    
+    # Convert back to numpy
+    img_fkmig = img_fkmig.detach().cpu().numpy()
+    img_pp = img_pp.detach().cpu().numpy()
+
+    # Truncation in axial direction, though rather done by interpolation.
+    img_fkmig = img_fkmig[:nz_cutoff, :]
+    img_pp = img_pp[:nz_cutoff, :]
+
+    # Saving
+    res_filename_img = join(training_data_path_img, f'img_{i}.mat')
+    # Actual saving code TODO, matfile v7.3.
+
+    data = usdata
+    res_filename_data = join(training_data_path_data, f'data_{i}.mat')
+    # Actual saving code TODO, matfile v7.3.
+
+    rc_time_end = time()
+    print('Reconstruction Duration: '
+          f'{str(timedelta(seconds=rc_time_end - rc_time_start))}')
