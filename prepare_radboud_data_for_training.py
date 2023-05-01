@@ -1,6 +1,6 @@
-"""Python version of matlab script of same.
+"""Python version of matlab script of same name.
 
-Script does image formation on ultrasound acquisition data.]
+Script does image formation on ultrasound acquisition data.
 
 Author: Ryan A.L. Schoop
 """
@@ -13,7 +13,7 @@ from datetime import timedelta
 import numpy as np
 from scipy.io import loadmat
 from h5py import File
-from torch import from_numpy, real
+from torch import from_numpy, real, zeros
 from deepus import torch_fkmig, torch_image_formation
 
 # Script assumes that the data is stored in 'ExperimentalData/CIRS073_RUMC' or
@@ -27,7 +27,7 @@ training_data_path_root = join(storage_path, 'TrainingData', data_set)
 
 # Settings for reconstruction
 # Sub-sampled number of steering angles used for reconstruction [1, ..., 75]
-n_ang_ss = 1
+n_ang_ss = 16
 # Truncation of pixels in axial direction.
 # Note: this is rather replaced by proper interpolation.
 nz_cutoff = 1500
@@ -64,13 +64,10 @@ if n_ang_ss == 1:
 else:
     ang_ss = np.linspace(np.squeeze(usheader.xmitAngles[0]),
                          np.squeeze(usheader.xmitAngles[-1]), n_ang_ss)
-    ang_ind = np.zeros(n_ang_ss)
+    ang_ind = np.zeros(n_ang_ss, dtype=np.int64)
     for i_ang in range(n_ang_ss):
-        # Should only be scalar.
         ang_ind[i_ang] = np.argmin(np.abs(np.squeeze(usheader.xmitAngles)
                                           - ang_ss[i_ang])).squeeze()
-    # Would check this clause one time, but not that important because only
-    # 1 angle and 75 angles are used in my project.
 
 usdata = np.atleast_3d(usdata[:, :, ang_ind])
 usheader.xmitAngles = np.atleast_1d(np.squeeze(usheader.xmitAngles)[ang_ind])
@@ -99,10 +96,10 @@ for i, data_file in enumerate(data_files):
     # Correct angle dependent delay
     n_t = usdata.shape[0]
     dt = 1 / np.squeeze(usheader.fs)
-    delay = np.abs((n_ele - 1) / 2 * np.squeeze(usheader.pitch) * np.sin(np.deg2rad(usheader.xmitAngles)) / sos_bgn)
+    delay = np.abs((n_ele - 1) / 2 * np.squeeze(usheader.pitch)
+                   * np.sin(np.deg2rad(usheader.xmitAngles)) / sos_bgn)
     delay_ind = np.floor(delay / dt).astype(int)
     for i_ang in range(n_ang_ss):
-        # This checks out regarding the indices wrt. to matlab code I think.
         usdata[:(n_t - delay_ind[i_ang]), :, i_ang] = (
             usdata[delay_ind[i_ang]:, :, i_ang])
         usdata[(n_t - delay_ind[i_ang]):, :, i_ang] = 0
@@ -110,22 +107,25 @@ for i, data_file in enumerate(data_files):
     # Correct channel 125
     usdata[:, 125, :] = 2 * usdata[:, 125, :]
 
-    # Set up fk-migration and run it.
-    fk_para = {
-        'pitch': np.squeeze(usheader.pitch).astype(np.float32),
-        'fs': np.squeeze(usheader.fs).astype(np.float32),
-        'tx_angle': np.deg2rad(usheader.xmitAngles).astype(np.float32),
-        'c': sos_bgn.astype(np.float32),
-        't0': 0
-    }
-    # I don't think this has been checked for case of more angles than 1.
-    # TODO have a working version for 75 angles.
-    img_fkmig = torch_fkmig(from_numpy(usdata.squeeze()), fk_para)
+    img_fkmig = zeros((usdata.shape[0], usdata.shape[1]))
+    for k, xmitAngle in enumerate(usheader.xmitAngles):
+        # Set up fk-migration and run it.
+        fk_para = {
+            'pitch': np.squeeze(usheader.pitch).astype(np.float32),
+            'fs': np.squeeze(usheader.fs).astype(np.float32),
+            'tx_angle': np.deg2rad(xmitAngle).astype(np.float32),
+            'c': sos_bgn.astype(np.float32),
+            't0': 0
+        }
+        # Compounding
+        img_fkmig = ((k * img_fkmig
+                      + torch_fkmig(from_numpy(usdata[:, :, k]), fk_para))
+                     / (k + 1))
 
     # Image post processing
     img_pp = torch_image_formation(real(img_fkmig), -70)
     
-    # Convert back to numpy
+    # Convert back to numpy.
     img_fkmig = img_fkmig.detach().cpu().numpy()
     img_pp = img_pp.detach().cpu().numpy()
 
