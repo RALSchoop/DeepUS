@@ -14,6 +14,7 @@ import numpy as np
 from scipy.io import loadmat
 from h5py import File
 from torch import from_numpy, real, zeros
+import hdf5storage
 from deepus import torch_fkmig, torch_image_formation
 
 # Script assumes that the data is stored in 'ExperimentalData/CIRS073_RUMC' or
@@ -23,7 +24,7 @@ data_set = 'CIRS040GSE' # Pick CIRS073_RUMC or CIRS040GSE
 experimental_data_path = join(storage_path, 'ExperimentalData', data_set)
 
 # This is where the training data will be stored.
-training_data_path_root = join(storage_path, 'TrainingData', data_set)
+training_data_path_root = join(storage_path, 'TrainingDataPyGen', data_set)
 
 # Settings for reconstruction
 # Sub-sampled number of steering angles used for reconstruction [1, ..., 75]
@@ -133,13 +134,18 @@ for i, data_file in enumerate(data_files):
     img_fkmig = img_fkmig[:nz_cutoff, :]
     img_pp = img_pp[:nz_cutoff, :]
 
-    # Saving
-    res_filename_img = join(training_data_path_img, f'img_{i}.mat')
-    # Actual saving code TODO, matfile v7.3.
+    # Saving.
+    options = hdf5storage.Options(matlab_compatible=True)
+    res_filename_img = join(training_data_path_img, f'img_{i + 1}.mat')
+    hdf5storage.writes(
+        {'/img_fkmig': img_fkmig, '/img_pp': img_pp, '/fk_para': fk_para},
+        res_filename_img, options=options)
 
     data = usdata
-    res_filename_data = join(training_data_path_data, f'data_{i}.mat')
-    # Actual saving code TODO, matfile v7.3.
+    res_filename_data = join(training_data_path_data, f'data_{i + 1}.mat')
+    fk_para['tx_angle'] = usheader.xmitAngles
+    hdf5storage.writes({'/data': data, '/fk_para': fk_para}, res_filename_data,
+                       options=options)
 
     rc_time_end = time()
     print('Reconstruction Duration: '
