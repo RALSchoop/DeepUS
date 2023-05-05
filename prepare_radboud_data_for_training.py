@@ -11,6 +11,7 @@ from glob import glob
 from time import time
 from datetime import timedelta
 import numpy as np
+from numpy.core.records import fromarrays
 from scipy.io import loadmat
 from h5py import File
 from torch import from_numpy, real, zeros
@@ -28,7 +29,7 @@ training_data_path_root = join(storage_path, 'TrainingDataPyGen', data_set)
 
 # Settings for reconstruction
 # Sub-sampled number of steering angles used for reconstruction [1, ..., 75]
-n_ang_ss = 16
+n_ang_ss = 1
 # Truncation of pixels in axial direction.
 # Note: this is rather replaced by proper interpolation.
 nz_cutoff = 1500
@@ -150,3 +151,35 @@ for i, data_file in enumerate(data_files):
     rc_time_end = time()
     print('Reconstruction Duration: '
           f'{str(timedelta(seconds=rc_time_end - rc_time_start))}')
+
+# Additional metadata
+md_usheader = loadmat(header_file, matlab_compatible=True,
+                      variable_names=['USHEADER'])['USHEADER']
+
+if data_set == 'CIRS040GSE':
+    lesion_idx = {
+        'high_attenuation_hypoechoic': np.arange(1, 6),
+        'high_attenuation_wires': np.arange(6, 11),
+        'high_attenuation_plusdb': np.arange(11, 16),
+        'high_attenuation_minusdb': np.arange(16, 21),
+        'low_attenuation_hypoechoic': 20 + np.arange(1, 6),
+        'low_attenuation_wires': 20 + np.arange(6, 11),
+        'low_attenuation_plusdb': 20 + np.arange(11, 16),
+        'low_attenuation_minusdb': 20 + np.arange(16, 21),
+        'nIdx': n_data
+    }
+elif data_set == 'CIRS073_RUMC':
+    # TODO Breast phantom
+    pass
+else:
+    raise ValueError("Unsupported data set code.")
+
+save_dict = {
+    '/USHEADER': md_usheader,
+    '/TargetInfo': {'nz_cutoff': nz_cutoff},
+    '/LesionIdx': lesion_idx
+}
+
+res_filename_metadata = join(training_data_path_root, 'metadata.mat')
+hdf5storage.writes(save_dict, res_filename_metadata,
+                   options=hdf5storage.Options(matlab_compatible=True))
