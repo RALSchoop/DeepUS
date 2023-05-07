@@ -11,7 +11,6 @@ from glob import glob
 from time import time
 from datetime import timedelta
 import numpy as np
-from numpy.core.records import fromarrays
 from scipy.io import loadmat
 from h5py import File
 from torch import from_numpy, real, zeros
@@ -35,7 +34,12 @@ n_ang_ss = 1
 nz_cutoff = 1500
 
 # Load the header containing information about the transducer settings.
-header_file = join(experimental_data_path, 'USHEADER_20220330105548.mat')
+if data_set == 'CIRS040GSE':
+    header_file = join(experimental_data_path, 'USHEADER_20220330105548.mat')
+elif data_set == 'CIRS073_RUMC':
+    header_file = join(experimental_data_path, 'USHEADER_20210624112712S.mat')
+else:
+    raise ValueError('Unsupported data set.')
 usheader = loadmat(header_file, struct_as_record=False)['USHEADER'][0][0]
 
 n_ang = len(usheader.xmitAngles)
@@ -158,19 +162,31 @@ md_usheader = loadmat(header_file, matlab_compatible=True,
 
 if data_set == 'CIRS040GSE':
     lesion_idx = {
-        'high_attenuation_hypoechoic': np.arange(1, 6),
-        'high_attenuation_wires': np.arange(6, 11),
-        'high_attenuation_plusdb': np.arange(11, 16),
-        'high_attenuation_minusdb': np.arange(16, 21),
-        'low_attenuation_hypoechoic': 20 + np.arange(1, 6),
-        'low_attenuation_wires': 20 + np.arange(6, 11),
-        'low_attenuation_plusdb': 20 + np.arange(11, 16),
-        'low_attenuation_minusdb': 20 + np.arange(16, 21),
-        'nIdx': n_data
+        'high_attenuation_hypoechoic': np.arange(1, 6).astype(np.float64),
+        'high_attenuation_wires': np.arange(6, 11).astype(np.float64),
+        'high_attenuation_plusdb': np.arange(11, 16).astype(np.float64),
+        'high_attenuation_minusdb': np.arange(16, 21).astype(np.float64),
+        'low_attenuation_hypoechoic': 20 + np.arange(1, 6).astype(np.float64),
+        'low_attenuation_wires': 20 + np.arange(6, 11).astype(np.float64),
+        'low_attenuation_plusdb': 20 + np.arange(11, 16).astype(np.float64),
+        'low_attenuation_minusdb': 20 + np.arange(16, 21).astype(np.float64),
+        'nIdx': float(n_data)
     }
 elif data_set == 'CIRS073_RUMC':
-    # TODO Breast phantom
-    pass
+    keys = ('hyper_lesion1', 'hyper_lesion2', 'hyper_lesion3',
+                       'hypo_lesion1', 'hypo_lesion2', 'hypo_lesion3',
+                       'no_lesion1', 'no_lesion2')
+    file_ids = (join('hyper_lesion', 'USDATA'), 'hyper_lesion2',
+                   'hyper_lesion3', join('hypo_lesion', 'USDATA'),
+                   'hypo_lesion2', 'hypo_lesion3',
+                   join('no_lesion', 'USDATA'), 'no_lesion2')
+    lesion_idx = {
+        key: np.nonzero([file_id in data_file
+                         for data_file in data_files
+                         ])[0].astype(np.float64) + 1
+             for key, file_id in zip(keys, file_ids)
+    }
+    lesion_idx['nIdx'] = float(n_data)
 else:
     raise ValueError("Unsupported data set code.")
 
