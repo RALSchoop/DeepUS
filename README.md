@@ -2,7 +2,7 @@
 Ultrasound beamforming with end-to-end deep learning for single plane wave imaging. This repository contains code to preprocess raw ultrasound data, train neural networks for image reconstruction and evaluate the trained models.
 
 ## DeepUS Dataset
-Associated with this code is the dataset of 220 breast phantom samples and 40 calibration phantom samples. The data can be found on [Zenodo](add-link).
+Associated with this code is the dataset of 220 breast phantom samples and 40 calibration phantom samples. The data can be found on [Zenodo](https://zenodo.org/record/7986407).
 
 ## Usage
 ### Preprocessing Data
