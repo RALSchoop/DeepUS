@@ -1,12 +1,17 @@
 # DeepUS
-Ultrasound beamforming with end-to-end deep learning for single plane wave imaging. This repository contains code to preprocess raw ultrasound data, train neural networks for image reconstruction and evaluate the trained models.
+Ultrasound beamforming with end-to-end deep learning for single plane wave imaging. This repository contains code to preprocess raw ultrasound data, simulate ultrasound data, train neural networks for image reconstruction and evaluate the trained models.
 
 ## DeepUS Dataset
 Associated with this code is the dataset of 220 breast phantom samples and 40 calibration phantom samples. The data can be found on [Zenodo](https://zenodo.org/record/7986407).
 
 ## Usage
+This data and code is published with the aim to facilitate creation and validation of various algorithms on the same data. Use whichever components from this publication as it suits your needs. When you do please cite [TBD PAPER DOI].
+
 ### Preprocessing Data
 The data associated with this repository is raw ultrasound plane wave data of 75 angles. Image reconstruction and subsampling of the amount of angles can be done with the script `prepare_radboud_data_for_training.py`.
+
+### Matlab Functionality
+The matlab code provided here allows for simulation using the k-Wave toolbox, as well as preprocessing the data. The Matlab and Python code for preprocessing are analogous.
 
 ### Main Library
 This file `deepus.py` is the main library file containing the implementation details of the fk-migration reconstruction algorithm and of the network architectures.
@@ -24,3 +29,7 @@ Here is an example guide to install the dependencies for DeepUS using conda.
 * Check out [PyTorch start locally](https://pytorch.org/get-started/locally/) to get the right command to install PyTorch with conda, e.g. `conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia`.
 * Install other dependencies using `conda install cudnn numpy scipy h5py matplotlib hdf5storage`.
 
+## Matlab Requirements
+* Download the [k-Wave toolbox](http://www.k-wave.org/).
+* Download the [FelixMatlabTools](https://github.com/FelixLucka/FelixMatlabTools) toolbox.
+* Modify `startup.m` to set paths to k-Wave, FelixMatlabTools and the folder in which the data is stored (variable `storage_path`).
