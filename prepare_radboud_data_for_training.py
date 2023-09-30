@@ -190,6 +190,13 @@ elif data_set == 'CIRS073_RUMC':
 else:
     raise ValueError("Unsupported data set code.")
 
+md_usheader['xmitAngles'] = usheader.xmitAngles
+# Indexing to get to the actual value stored in the data object.
+md_usheader['xmitDelay'][0][0] = usheader.xmitDelay
+md_usheader['xmitFocus'] = usheader.xmitFocus
+md_usheader['xmitApodFunction'][0][0] = usheader.xmitApodFunction.astype(
+    np.float64)
+
 save_dict = {
     '/USHEADER': md_usheader,
     '/TargetInfo': {'nz_cutoff': nz_cutoff},
