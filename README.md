@@ -27,7 +27,10 @@ Here is an example guide to install the dependencies for DeepUS using conda.
 * Create a new environment with Python 3.8 `conda create -n deepus python=3.8`.
 * Activate the newly created environment `conda activate deepus`.
 * Check out [PyTorch start locally](https://pytorch.org/get-started/locally/) to get the right command to install PyTorch with conda, e.g. `conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia`.
-* Install other dependencies using `conda install cudnn numpy scipy h5py matplotlib hdf5storage`.
+* Install other dependencies using
+  + `conda install cudnn numpy scipy h5py matplotlib`
+  + `conda install -c conda-forge hdf5storage torchinfo`
+  + `conda install -y tensorboard`
 
 ## Matlab Requirements
 * Download the [k-Wave toolbox](http://www.k-wave.org/).
