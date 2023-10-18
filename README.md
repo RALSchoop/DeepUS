@@ -26,11 +26,10 @@ When it comes to evaluation there is one library file `evaluation.py` containing
 Here is an example guide to install the dependencies for DeepUS using conda.
 * Create a new environment with Python 3.8 `conda create -n deepus python=3.8`.
 * Activate the newly created environment `conda activate deepus`.
+* Run `conda install cudnn numpy scipy h5py matplotlib tensorboard`
 * Check out [PyTorch start locally](https://pytorch.org/get-started/locally/) to get the right command to install PyTorch with conda, e.g. `conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia`.
-* Install other dependencies using
-  + `conda install cudnn numpy scipy h5py matplotlib`
-  + `conda install -c conda-forge hdf5storage torchinfo`
-  + `conda install -y tensorboard`
+* Check that both pytorch and torchvision were actually compiled for using your GPU correctly by checking `conda list pytorch`, `conda list torchvision`. If this does not show the GPU builds, try running `conda install pytorch=*=*cuda* -c pytorch` or `conda install torchvision=*=*cuda* -c pytorch` again.
+* Run `conda install -c conda-forge hdf5storage torchinfo`
 
 ## Matlab Requirements
 * Download the [k-Wave toolbox](http://www.k-wave.org/).
