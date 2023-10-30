@@ -18,7 +18,7 @@ def model_output(model: torch.nn.Module,
      - msd_path: path to model state dict after training.
      - input: input to pass through model.
     """
-    model.load_state_dict(torch.load(msd_path))
+    model.load_state_dict(torch.load(msd_path, map_location='cuda:0'))
     model.eval()
     model_img = model(input).detach()
     # Rescaling to [0, 1].

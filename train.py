@@ -11,109 +11,141 @@ from torch.utils.tensorboard import SummaryWriter
 import coach
 import math
 import os.path
+from os import makedirs
 import time
 import datetime
 
 from torchinfo import summary
 
+#### user defined settings #####################################################
+
 # Specify the root dataset folder here.
-dataset_root = r'/export/scratch2/home/rals/Data/DeepUS/TrainingData/CIRS073_RUMC'
+data_root      = r'/export/scratch2/felix/Dropbox/Data/US/DeepUSData/'
+data_root      = r'/bigstore/felix/US/DeepUSData/'
+data_set       = 'CIRS073_RUMC'
+
+random_seeds   = range(9,11)
+
+train_fraction = 0.1
+
+# 'full', 'post', 'pre'
+model_type     = 'full' 
+
+################################################################################
 
 if torch.cuda.is_available():
-    c_device = torch.device('cuda')
+    gpu_index = int(input("choose the gpu index (default: 0) : ") or "0")
+    c_device = torch.device('cuda:{}'.format(gpu_index))
 else:
     c_device = torch.device('cpu')
 print(f'Chosen device: {c_device}')
 
-# Writer outputs to ./runs/ by default.
-# To view: start tensorboard on command line with: tensorboard --logdir=runs
-# Make sure your current directory is on the right drive.
-writer = SummaryWriter('runs/deepus_experiment_n')
+for random_seed in random_seeds:
 
-# On reproducibility: https://pytorch.org/docs/stable/notes/randomness.html.
-torch.manual_seed(seed := 1)
-torch.backends.cudnn.deterministic = True
+    # Writer outputs to ./runs/ by default.
+    # To view: start tensorboard on command line with: tensorboard --logdir=runs
+    # Make sure your current directory is on the right drive.
+    trained_nn_path = os.path.join(data_root, 'TrainedNetworks', data_set, model_type,
+                                   'trainfrac{}'.format(train_fraction), 'rnd{}'.format(random_seed))
+    makedirs(trained_nn_path, exist_ok=True)
+    writer = SummaryWriter(trained_nn_path)
 
-# IMPORTANT, to have all tensors of the same dtype.
-# More important it seems that cuFFT doesn't work with dtype float64
-torch.set_default_dtype(torch.float32)
+    # On reproducibility: https://pytorch.org/docs/stable/notes/randomness.html.
+    torch.manual_seed(seed := random_seed)
+    torch.backends.cudnn.deterministic = True
 
-deepus_dataset = deepus.UltrasoundDataset(
-        dataset_root,
-        input_transform=torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor()]),
-        target_transform=torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor()]))
-h_data = deepus_dataset.load_header()
+    # IMPORTANT, to have all tensors of the same dtype.
+    # More important it seems that cuFFT doesn't work with dtype float64
+    torch.set_default_dtype(torch.float32)
 
-train_sampler, test_sampler = deepus_dataset.create_samplers(0.2)
-# Set the batch size.
-train_loader = torch.utils.data.DataLoader(deepus_dataset,
-                                           batch_size=(batch_size := 1),
-                                           sampler=train_sampler)
-test_loader = torch.utils.data.DataLoader(deepus_dataset,
-                                          batch_size=batch_size,
-                                          sampler=test_sampler)
-# Examplatory sample.
-train_iter = iter(train_loader)
-inputs, targets = train_iter.next()
+    deepus_dataset = deepus.UltrasoundDataset(
+            os.path.join(data_root, 'TrainingData', data_set),
+            input_transform=torchvision.transforms.Compose([
+                torchvision.transforms.ToTensor()]),
+            target_transform=torchvision.transforms.Compose([
+                torchvision.transforms.ToTensor()]))
+    h_data = deepus_dataset.load_header()
 
-# Declare model
-model = deepus.DataFKImageNetwork(h_data, residual=True, num_blocks=3)
-model.to(c_device)
-loss_fn = torch.nn.MSELoss(reduction='sum')
-optimizer = torch.optim.Adam(model.parameters(), learning_rate := 1e-2,
-                             amsgrad=True)
+    train_sampler, test_sampler = deepus_dataset.create_samplers(test_fraction  = 0.2,
+                                                                 train_fraction = train_fraction)
+    # Set the batch size.
+    train_loader = torch.utils.data.DataLoader(deepus_dataset,
+                                               batch_size=(batch_size := 1),
+                                               sampler=train_sampler)
+    test_loader = torch.utils.data.DataLoader(deepus_dataset,
+                                              batch_size=batch_size,
+                                              sampler=test_sampler)
+    # Examplatory sample.
+    train_iter = iter(train_loader)
+    inputs, targets = next(train_iter)
 
-# Log settings about run.
-training_settings_path = os.path.join(writer.get_logdir(),
-                                      f'training_settings.txt')
-with open(training_settings_path, 'w') as logfile:
-    logfile.write(str(model))
-    logfile.write('\n\n')
-    logfile.write(str(summary(model, input_data=inputs, verbose=0, depth=5,
-                  row_settings=["depth", "var_names"],
-                  col_names=["input_size", "kernel_size", "output_size",
-                             "num_params", "mult_adds"])))
-    logfile.write('\n\n')
-    logfile.write(str(optimizer))
-    logfile.write('\n\n')
-    logfile.write(f'Train loader size: {len(train_loader)}\n')
-    logfile.write(f'Test loader size: {len(test_loader)}\n')
-    logfile.write(f'Batch size: {batch_size}\n')
+    # Declare model
+    if model_type == 'pre': # pre processing only
+        model = deepus.DataFKImageNetwork(h_data, residual=True, cnn_pre=True, cnn_post=False, num_blocks=6)
+    elif model_type == 'post': # post processing only
+        model = deepus.DataFKImageNetwork(h_data, residual=True, cnn_pre=False, cnn_post=True, num_blocks=6)
+    elif model_type == 'full': # full model
+        model = deepus.DataFKImageNetwork(h_data, residual=True, cnn_pre=True, cnn_post=True, num_blocks=3)
+    else:
+        raise ValueError("model_type needs to be 'pre', 'post' or 'full'")
 
-# Single model pass:
-# once = model(inputs.to(device=c_device))
+    model.to(c_device)
+    loss_fn = torch.nn.MSELoss(reduction='sum')
+    optimizer = torch.optim.Adam(model.parameters(), learning_rate := 1e-2,
+                                 amsgrad=True)
 
-best_test_loss = 1_000_000.
-training_time_start = time.time()
-for epoch in range(epochs := 70):
-    epoch_time_start = time.time()
-    print(f'\nEpoch: {epoch+1}')
 
-    print() # Just for \n.
-    train_loss = coach.train_single_epoch(
-        epoch, math.floor(len(train_loader) / 6), train_loader, optimizer,
-        model, loss_fn, writer, device=c_device)
-    print()
-    test_loss = coach.test_single_epoch(
-        epoch, math.floor(len(test_loader) / 6), test_loader, model, loss_fn,
-        writer, device=c_device)
-    epoch_time_end = time.time()
-    print(f'\nEpoch Duration: {str(datetime.timedelta(seconds=epoch_time_end - epoch_time_start))}')
+    # Single model pass:
+    # once = model(inputs.to(device=c_device))
 
-    # Log for each epoch the latest per batch loss of training and test.
-    writer.add_scalars('Training and Test Loss',
-                       {'Training': train_loss, 'Test': test_loss}, epoch + 1)
-    writer.flush()
+    best_test_loss = 1_000_000.
+    training_time_start = time.time()
+    for epoch in range(epochs := 70):
+        epoch_time_start = time.time()
+        print(f'\nEpoch: {epoch+1}')
 
-    # Track best performance, and save.
-    if test_loss < best_test_loss:
-        best_test_loss = test_loss
-        model_path = os.path.join(writer.get_logdir(), f'model_epoch{epoch}.msd')
-        # Maybe improve this naming, or keep a seperate file of the parameters.
-        torch.save(model.state_dict(), model_path)
-        print(f'\nImproved test loss, model saved!')
+        print() # Just for \n.
+        train_loss = coach.train_single_epoch(
+            epoch, math.floor(len(train_loader) / 6), train_loader, optimizer,
+            model, loss_fn, writer, device=c_device)
+        print()
+        test_loss = coach.test_single_epoch(
+            epoch, math.floor(len(test_loader) / 6), test_loader, model, loss_fn,
+            writer, device=c_device)
+        epoch_time_end = time.time()
+        print(f'\nEpoch Duration: {str(datetime.timedelta(seconds=epoch_time_end - epoch_time_start))}')
 
-training_time_end = time.time()
-print(f'\nTraining time: {str(datetime.timedelta(seconds=training_time_end - training_time_start))}')
+        # Log for each epoch the latest per batch loss of training and test.
+        writer.add_scalars('Training and Test Loss',
+                           {'Training': train_loss, 'Test': test_loss}, epoch + 1)
+        writer.flush()
+
+        # Track best performance, and save.
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+            #model_path = os.path.join(writer.get_logdir(), f'model_epoch{epoch}.msd')
+            model_path = os.path.join(writer.get_logdir(), 'model_best.msd')
+            # Maybe improve this naming, or keep a seperate file of the parameters.
+            torch.save(model.state_dict(), model_path)
+            print('\nImproved test loss, model saved!')
+
+    training_time_end = time.time()
+    print(f'\nTraining time: {str(datetime.timedelta(seconds=training_time_end - training_time_start))}')
+
+    # Log settings about run.
+    training_settings_path = os.path.join(writer.get_logdir(), 'training_settings.txt')
+    with open(training_settings_path, 'w') as logfile:
+        logfile.write(str(model))
+        logfile.write('\n\n')
+        logfile.write(str(summary(model, input_data=inputs.to(device=c_device), verbose=0, depth=5,
+                      row_settings=["depth", "var_names"],
+                      col_names=["input_size", "kernel_size", "output_size",
+                                 "num_params", "mult_adds"])))
+        logfile.write('\n\n')
+        logfile.write(str(optimizer))
+        logfile.write('\n\n')
+        logfile.write(f'Random Seed: {random_seed}\n')
+        logfile.write(f'Train loader size: {len(train_loader)}\n')
+        logfile.write(f'Test loader size: {len(test_loader)}\n')
+        logfile.write(f'Batch size: {batch_size}\n')
+        logfile.write(f'\nTraining time: {str(datetime.timedelta(seconds=training_time_end - training_time_start))}')

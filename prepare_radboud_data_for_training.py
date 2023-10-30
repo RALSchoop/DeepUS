@@ -19,8 +19,8 @@ from deepus import torch_fkmig, torch_image_formation
 
 # Script assumes that the data is stored in 'ExperimentalData/CIRS073_RUMC' or
 # 'ExperimentalData/CIRS040GSE/' within some storage_path root directory.
-storage_path = r'D:\Files\CWI Winter Spring 2022\Data\DeepUS'
-data_set = 'CIRS040GSE' # Pick CIRS073_RUMC or CIRS040GSE
+storage_path = '/export/scratch2/felix/Dropbox/Data/US/DeepUSData'
+data_set = 'CIRS073_RUMC' # Pick CIRS073_RUMC or CIRS040GSE
 experimental_data_path = join(storage_path, 'ExperimentalData', data_set)
 
 # This is where the training data will be stored.
@@ -95,7 +95,7 @@ for i, data_file in enumerate(data_files):
         usdata = np.swapaxes(np.squeeze(np.array(f.get('USDATA'))),
                             0, 2).astype(np.float64)
         usdata = np.atleast_3d(usdata[:, :, ang_ind])
-    
+
     # Correct general delay, i.e. lens correction
     usdata = usdata[lens_delay:, :, :]
 
@@ -109,7 +109,7 @@ for i, data_file in enumerate(data_files):
         usdata[:(n_t - delay_ind[i_ang]), :, i_ang] = (
             usdata[delay_ind[i_ang]:, :, i_ang])
         usdata[(n_t - delay_ind[i_ang]):, :, i_ang] = 0
-    
+
     # Correct channel 125
     usdata[:, 125, :] = 2 * usdata[:, 125, :]
 
@@ -130,7 +130,7 @@ for i, data_file in enumerate(data_files):
 
     # Image post processing
     img_pp = torch_image_formation(real(img_fkmig), -70)
-    
+
     # Convert back to numpy.
     img_fkmig = img_fkmig.detach().cpu().numpy()
     img_pp = img_pp.detach().cpu().numpy()
@@ -189,13 +189,6 @@ elif data_set == 'CIRS073_RUMC':
     lesion_idx['nIdx'] = float(n_data)
 else:
     raise ValueError("Unsupported data set code.")
-
-md_usheader['xmitAngles'] = usheader.xmitAngles
-# Indexing to get to the actual value stored in the data object.
-md_usheader['xmitDelay'][0][0] = usheader.xmitDelay
-md_usheader['xmitFocus'] = usheader.xmitFocus
-md_usheader['xmitApodFunction'][0][0] = usheader.xmitApodFunction.astype(
-    np.float64)
 
 save_dict = {
     '/USHEADER': md_usheader,

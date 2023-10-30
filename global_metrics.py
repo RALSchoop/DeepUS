@@ -12,14 +12,13 @@ from os.path import join
 # Global initializations.
 torch.manual_seed(seed := 1)
 
-# Specify your path to the root data directory for training and testing.
-# This should be of the form: r'...\CIRS073_RUMC' or r'.../CIRS073_RUMC',
-# depending on your os's seperator.
-root_data_dir = r'D:\Files\CWI Winter Spring 2022\Data\DeepUS\TrainingData\CIRS073_RUMC'
+# Specify the root dataset folder here.
+data_root      = r'/export/scratch2/felix/Dropbox/Data/US/DeepUSData/'
+data_set       = 'CIRS073_RUMC'
 
 # Initialize dataset.
 deepus_dataset = deepus.UltrasoundDataset(
-        root_data_dir,
+        join(data_root, 'TrainingData', data_set),
         input_transform=torchvision.transforms.Compose(
             [torchvision.transforms.ToTensor()]),
         target_transform=torchvision.transforms.Compose(
@@ -39,20 +38,24 @@ input_img = deepus.torch_image_formation_batch(
     torch.real(deepus.torch_fkmig_batch(input, h_data)))
 
 # Specify model configuration
-model = deepus.DataFKImageNetwork(h_data, residual=True, num_blocks=3)
+
+model_type = 'full'
+if model_type == 'pre': # pre processing only
+    model = deepus.DataFKImageNetwork(h_data, residual=True, cnn_pre=True, cnn_post=False, num_blocks=6)
+elif model_type == 'post': # post processing only
+    model = deepus.DataFKImageNetwork(h_data, residual=True, cnn_pre=False, cnn_post=True, num_blocks=6)
+elif model_type == 'full': # full model
+    model = deepus.DataFKImageNetwork(h_data, residual=True, cnn_pre=True, cnn_post=True, num_blocks=3)
+else:
+    raise ValueError("model_type needs to be 'pre', 'post' or 'full'")
+        
 # Specify desired model state dict paths corresponding to model configuration.
 # These are essentially the model weights after training.
-runs_root = r'D:\Files\CWI Winter Spring 2022\DeepUS\pythonnew'
-msd_paths = [join(runs_root, 'gpu_s_runs', 'deepus_experiment_s1',
-                           'model_epoch67.msd'),
-             join(runs_root, 'gpu_sf_runs', 'deepus_experiment_s1f1',
-                   'model_epoch69.msd'),
-             join(runs_root, 'gpu_sf_runs', 'deepus_experiment_s1f2',
-                   'model_epoch62.msd'),
-             join(runs_root, 'gpu_sf_runs', 'deepus_experiment_s1f3',
-                   'model_epoch69.msd'),
-             join(runs_root, 'gpu_sf_runs', 'deepus_experiment_s1f4',
-                   'model_epoch68.msd')]
+trained_NN_root = join(data_root, 'TrainedNetworks', data_set , model_type)
+msd_paths = [join(trained_NN_root, 'trainfrac1' ,  'rnd1', 'model_best.msd'),
+             join(trained_NN_root, 'trainfrac0.5' ,  'rnd1', 'model_best.msd'),
+             join(trained_NN_root, 'trainfrac0.1' ,  'rnd1', 'model_best.msd'),
+             ]
 
 # Generate model outputs.
 model_outputs = [eva.model_output(model, msd_path, input)
