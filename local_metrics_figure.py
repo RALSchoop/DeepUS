@@ -90,10 +90,10 @@ model_cnrs_pre = [eva.cnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                   for model_img in model_outputs_pre]
 model_cnrs_post = [eva.cnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                    for model_img in model_outputs_post]
-
 fig, ax = make_figure(model_cnrs_full, model_cnrs_pre, model_cnrs_post,
                       train_fractions=train_fractions, n_init=n_init,
-                      n_samples_train=n_samples_train)
+                      n_samples_train=n_samples_train,
+                      figure_type='fill_between')
 ax.axhline(y=input_cnr, label='Input', ls='--', c='y')
 ax.axhline(y=target_cnr, label='Target', ls='--', c='m')
 ax.legend(loc='lower left')
@@ -111,6 +111,17 @@ model_crs_pre = [eva.cr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                  for model_img in model_outputs_pre]
 model_crs_post = [eva.cr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                   for model_img in model_outputs_post]
+fig, ax = make_figure(model_crs_full, model_crs_pre, model_crs_post,
+                      train_fractions=train_fractions, n_init=n_init,
+                      n_samples_train=n_samples_train,
+                      figure_type='fill_between')
+ax.axhline(y=input_cr, label='Input', ls='--', c='y')
+ax.axhline(y=target_cr, label='Target', ls='--', c='m')
+ax.legend(loc='lower left')
+ax.set_ylabel('CR [dB]')
+ax.set_xlabel('Number of training samples')
+ax.set_title('CR for different number of training samples')
+ax.set_xlim(1, n_samples_train)
 
 # Evaluation metrics: generalized contrast to noise ratio (gCNR)
 input_gcnr = eva.gcnr(input_img, c_ij=c_ij, r1=r1, r2=r2)
@@ -121,5 +132,16 @@ model_gcnrs_pre = [eva.gcnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                    for model_img in model_outputs_pre]
 model_gcnrs_post = [eva.gcnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                     for model_img in model_outputs_post]
+fig, ax = make_figure(model_gcnrs_full, model_gcnrs_pre, model_gcnrs_post,
+                      train_fractions=train_fractions, n_init=n_init,
+                      n_samples_train=n_samples_train,
+                      figure_type='fill_between')
+ax.axhline(y=input_gcnr, label='Input', ls='--', c='y')
+ax.axhline(y=target_gcnr, label='Target', ls='--', c='m')
+ax.legend(loc='lower left')
+ax.set_ylabel('gCNR')
+ax.set_xlabel('Number of training samples')
+ax.set_title('gCNR for different number of training samples')
+ax.set_xlim(1, n_samples_train)
 
 plt.show()
