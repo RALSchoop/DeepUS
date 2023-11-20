@@ -15,8 +15,9 @@ from os.path import join
 torch.manual_seed(seed := 1)
 
 # Specify the root dataset folder here.
-data_root      = r'/export/scratch2/felix/Dropbox/Data/US/DeepUSData/'
-data_set       = 'CIRS073_RUMC'
+data_root      = r'D:\Files\CWI Winter Spring 2022\Data\DeepUS\\'
+data_set       = 'CIRS040GSE'
+data_set_train = 'CIRS073_RUMC'
 
 # Initialize dataset.
 deepus_dataset = deepus.UltrasoundDataset(
@@ -60,7 +61,7 @@ else:
     
 # Specify desired model state dict paths corresponding to model configuration.
 # These are essentially the model weights after training.
-trained_NN_root = join(data_root, 'TrainedNetworks', data_set , model_type)
+trained_NN_root = join(data_root, 'TrainedNetworks', data_set_train, model_type)
 msd_paths = [join(trained_NN_root, 'trainfrac1' ,  'rnd1', 'model_best.msd'),
              join(trained_NN_root, 'trainfrac0.5' ,  'rnd1', 'model_best.msd'),
              join(trained_NN_root, 'trainfrac0.1' ,  'rnd1', 'model_best.msd'),
@@ -116,7 +117,7 @@ def display_img(img: torch.Tensor,
                                 facecolor='none', edgecolor='r'))
         
 # Set flag if you want to see all images.
-# Use display_img() c_xy, r1 and r2 arguments to check the desired ROI.
+# Use display_img() c_ij, r1 and r2 arguments to check the desired ROI.
 display = True
 if display:
     display_img(input_img, 'Input')

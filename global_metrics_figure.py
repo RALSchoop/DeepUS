@@ -104,3 +104,5 @@ input_ncc = eva.ncc(input_img, target)
 model_nccs = [eva.ncc(model_img, target) for model_img in model_outputs_full]
 model_nccs = [eva.ncc(model_img, target) for model_img in model_outputs_pre]
 model_nccs = [eva.ncc(model_img, target) for model_img in model_outputs_post]
+
+plt.show()

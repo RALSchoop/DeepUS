@@ -17,7 +17,8 @@ torch.manual_seed(seed := 1)
 
 # Specify the root dataset folder here.
 data_root      = r'D:\Files\CWI Winter Spring 2022\Data\DeepUS\\'
-data_set       = 'CIRS073_RUMC'
+data_set       = 'CIRS040GSE' # Dataset for the actual current sample index.
+data_set_train = 'CIRS073_RUMC' # Dataset on which models were trained.
 
 # Initialize dataset.
 deepus_dataset = deepus.UltrasoundDataset(
@@ -50,23 +51,24 @@ input_img = deepus.torch_image_formation_batch(
     torch.real(deepus.torch_fkmig_batch(input, h_data)))
 
 # Specify model configuration
-train_fractions = [0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
-                   0.9, 1]
+# train_fractions = [0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+train_fractions = [0.06, 0.2, 0.5, 1]
 # For each train fraction there are 16 different initializations of the model.
 # Useful to check if the order of the models is as desired:
 # msd_paths[(i-1)*n_init:i*n_init] has the same train_fraction.
-n_init = 16
+# n_init = 16
+n_init = 3
 
 # Takes a long time to calculate these so you might want to save and load.
 model_outputs_full = get_model_output('full', train_fractions, n_init, input,
-                                      data_root=data_root, data_set=data_set,
-                                      h_data=h_data)
+                                      data_root=data_root,
+                                      data_set=data_set_train, h_data=h_data)
 model_outputs_pre = get_model_output('pre', train_fractions, n_init, input,
-                                     data_root=data_root, data_set=data_set,
-                                     h_data=h_data)
+                                     data_root=data_root,
+                                     data_set=data_set_train, h_data=h_data)
 model_outputs_post = get_model_output('post', train_fractions, n_init, input,
-                                      data_root=data_root, data_set=data_set,
-                                      h_data=h_data)
+                                      data_root=data_root,
+                                      data_set=data_set_train, h_data=h_data)
 
 # Specify circle and ring with common center for evaluation of local metrics.
 # Specify center as an ij coordinate tuple, that is axial coordinate first.
@@ -119,3 +121,5 @@ model_gcnrs_pre = [eva.gcnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                    for model_img in model_outputs_pre]
 model_gcnrs_post = [eva.gcnr(model_img, c_ij=c_ij, r1=r1, r2=r2)
                     for model_img in model_outputs_post]
+
+plt.show()

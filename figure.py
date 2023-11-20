@@ -15,7 +15,7 @@ import torch.utils.data
 import torchvision
 import evaluation as eva
 from os.path import join
-from typing import Generator, Sequence, Tuple
+from typing import Generator, Literal, Sequence, Tuple
 
 def get_model_output(model_type, 
                      train_fractions,
@@ -53,7 +53,9 @@ def make_figure(model_metric_full: torch.Tensor,
                 model_metric_post: torch.Tensor,
                 train_fractions: Sequence[float],
                 n_init: int,
-                n_samples_train: int):
+                n_samples_train: int,
+                figure_type: Literal['errorbar', 'fill_between'] = 'fill_between'
+                ):
     # Note: model_metric is (now: is assumed) same ordering as msd_paths.
     def _tfpi(model_metric) -> Generator[Tuple[float, float], None, None]:
         """Get mean and std for each train fraction over the initialization."""
@@ -62,19 +64,35 @@ def make_figure(model_metric_full: torch.Tensor,
             tf_inits = np.array(model_metric[init * n_init:(init + 1) * n_init])
             yield (np.mean(tf_inits), np.std(tf_inits))
 
-    me_full = tuple(zip(*_tfpi(model_metric_full)))
-    me_pre = tuple(zip(*_tfpi(model_metric_pre)))
-    me_post = tuple(zip(*_tfpi(model_metric_post)))
+    me_full = np.array(tuple(zip(*_tfpi(model_metric_full))))
+    me_pre = np.array(tuple(zip(*_tfpi(model_metric_pre))))
+    me_post = np.array(tuple(zip(*_tfpi(model_metric_post))))
 
     fig, ax = plt.subplots()
     # It's actually not this because of ceiling and flooring in creating the
     # samplers. But in approximation it's ok.
     train_amount = list(n_samples_train * np.array(train_fractions))
-    ax.errorbar(train_amount, me_full[0], me_full[1],
-                label='Complete model', c='c', marker='H')
-    ax.errorbar(train_amount, me_pre[0], me_pre[1],
-                label='Pre-processing model', c='salmon', marker='H')
-    ax.errorbar(train_amount, me_post[0], me_post[1],
-                label='Post-processing model', c='tan', marker='H')
+    if figure_type == 'errorbar':
+        ax.errorbar(train_amount, me_full[0], me_full[1],
+                    label='Complete model', c='c', marker='H')
+        ax.errorbar(train_amount, me_pre[0], me_pre[1],
+                    label='Pre-processing model', c='salmon', marker='H')
+        ax.errorbar(train_amount, me_post[0], me_post[1],
+                    label='Post-processing model', c='tan', marker='H')
+    elif figure_type == 'fill_between':
+        ax.plot(train_amount, me_full[0], label='Complete model', c='c',
+                marker='H')
+        ax.fill_between(train_amount, me_full[0] + me_full[1],
+                        me_full[0] - me_full[1], color='c', alpha=0.2)
+        ax.plot(train_amount, me_pre[0], label='Pre-processing model',
+                c='salmon', marker='H')
+        ax.fill_between(train_amount, me_pre[0] + me_pre[1],
+                        me_pre[0] - me_pre[1], color='salmon', alpha=0.2)
+        ax.plot(train_amount, me_post[0], label='Post-processing model',
+                c='tan', marker='H')
+        ax.fill_between(train_amount, me_post[0] + me_post[1],
+                        me_post[0] - me_post[1], color='tan', alpha=0.2)
+    else:
+        raise ValueError(f'Invalid figure_type specificied: {figure_type}')
     
     return fig, ax
