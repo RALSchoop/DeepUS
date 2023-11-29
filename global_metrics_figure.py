@@ -42,13 +42,13 @@ input_img = deepus.torch_image_formation_batch(
     torch.real(deepus.torch_fkmig_batch(input, h_data)))
 
 # Specify model configuration
-# train_fractions = [0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-train_fractions = [0.06, 0.2, 0.5, 1]
+train_fractions = [0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+# train_fractions = [0.06, 0.2, 0.5, 1]
 # For each train fraction there are 16 different initializations of the model.
 # Useful to check if the order of the models is as desired:
 # msd_paths[(i-1)*n_init:i*n_init] has the same train_fraction.
-# n_init = 16
-n_init = 3
+n_init = 16
+# n_init = 3
 
 # Takes a long time to calculate these so you might want to save and load.
 model_outputs_full = get_model_output('full', train_fractions, n_init, input,
@@ -80,7 +80,7 @@ ax.set_ylabel('PSNR [dB]')
 ax.set_xlabel('Number of training samples')
 ax.set_title('PSNR for different number of training samples')
 ax.set_xlim(1, n_samples_train)
-# ax.set_ylim(18, 25)
+ax.set_ylim(19, 25)
 
 # Evaluation metric: l1 loss
 input_l1loss = eva.l1loss(input_img, target)
@@ -100,6 +100,7 @@ ax.set_ylabel('L1 Loss')
 ax.set_xlabel('Number of training samples')
 ax.set_title('L1 Loss for different number of training samples')
 ax.set_xlim(1, n_samples_train)
+ax.set_ylim(0.03, 0.07)
 
 # Evaluation metric: l2 loss
 input_l2loss = eva.l2loss(input_img, target)
@@ -119,6 +120,7 @@ ax.set_ylabel('L2 Loss')
 ax.set_xlabel('Number of training samples')
 ax.set_title('L2 Loss for different number of training samples')
 ax.set_xlim(1, n_samples_train)
+ax.set_ylim(0.045, 0.095)
 
 # Evalution metric: normalized cross correlation (NCC)
 input_ncc = eva.ncc(input_img, target)
@@ -138,5 +140,6 @@ ax.set_ylabel('Normalized Cross Correlation (NCC)')
 ax.set_xlabel('Number of training samples')
 ax.set_title('NCC for different number of training samples')
 ax.set_xlim(1, n_samples_train)
+ax.set_ylim(0.92, 0.97)
 
 plt.show()

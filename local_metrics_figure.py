@@ -28,8 +28,16 @@ deepus_dataset = deepus.UltrasoundDataset(
         target_transform=torchvision.transforms.Compose(
             [torchvision.transforms.ToTensor()]))
 h_data = deepus_dataset.load_header()
-train_sampler, _ = deepus_dataset.create_samplers(0.2)
-n_samples_train = len(train_sampler.indices)
+
+# Just to get the right samplers with the config style above.
+deepus_dataset_train = deepus.UltrasoundDataset(
+        join(data_root, 'TrainingData', data_set_train),
+        input_transform=torchvision.transforms.Compose(
+            [torchvision.transforms.ToTensor()]),
+        target_transform=torchvision.transforms.Compose(
+            [torchvision.transforms.ToTensor()]))
+train_sampler, _ = deepus_dataset_train.create_samplers(0.2)
+n_samples_train = len(train_sampler.indices) # need to correct this.
 
 # Sample choice
 # Indices 1 to 5 contain hypoechoic regions, indices 11 to 15 have
@@ -51,13 +59,13 @@ input_img = deepus.torch_image_formation_batch(
     torch.real(deepus.torch_fkmig_batch(input, h_data)))
 
 # Specify model configuration
-# train_fractions = [0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-train_fractions = [0.06, 0.2, 0.5, 1]
+train_fractions = [0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+# train_fractions = [0.06, 0.2, 0.5, 1]
 # For each train fraction there are 16 different initializations of the model.
 # Useful to check if the order of the models is as desired:
 # msd_paths[(i-1)*n_init:i*n_init] has the same train_fraction.
-# n_init = 16
-n_init = 3
+n_init = 16
+# n_init = 3
 
 # Takes a long time to calculate these so you might want to save and load.
 model_outputs_full = get_model_output('full', train_fractions, n_init, input,
@@ -101,6 +109,7 @@ ax.set_ylabel('CNR [dB]')
 ax.set_xlabel('Number of training samples')
 ax.set_title('CNR for different number of training samples')
 ax.set_xlim(1, n_samples_train)
+ax.set_ylim(5.5, 19)
 
 # Evaluation metrics: contrast ratio (CR)
 input_cr = eva.cr(input_img, c_ij=c_ij, r1=r1, r2=r2)
@@ -122,6 +131,7 @@ ax.set_ylabel('CR [dB]')
 ax.set_xlabel('Number of training samples')
 ax.set_title('CR for different number of training samples')
 ax.set_xlim(1, n_samples_train)
+ax.set_ylim(-41, -7)
 
 # Evaluation metrics: generalized contrast to noise ratio (gCNR)
 input_gcnr = eva.gcnr(input_img, c_ij=c_ij, r1=r1, r2=r2)
@@ -143,5 +153,6 @@ ax.set_ylabel('gCNR')
 ax.set_xlabel('Number of training samples')
 ax.set_title('gCNR for different number of training samples')
 ax.set_xlim(1, n_samples_train)
+ax.set_ylim(0.85, 1.02)
 
 plt.show()
