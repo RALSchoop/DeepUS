@@ -67,14 +67,14 @@ model_outputs = [eva.model_output(model, msd_path, input)
 # Specify rectangles for resolution evaluation.
 # A different rectangle can be defined for axial and lateral direction,
 # as well as the input, model outputs and target images.
-input_roi_ax = Rectangle((65, 730), 12, 85)
+input_roi_ax = Rectangle((65, 360), 12, 55)
 models_roi_ax = input_roi_ax
 # Too much noise and too little signal over the area from wire for fair
 # comparison of target using same Rectangle as input with Gaussian fit
 # for resolution PSF estimation. Hence tailored ROI for target.
-target_roi_ax = Rectangle((68, 730), 6, 75)
+target_roi_ax = Rectangle((68, 360), 6, 55)
 
-input_roi_lat = Rectangle((65, 730), 12, 85)
+input_roi_lat = Rectangle((65, 360), 12, 55)
 models_roi_lat = input_roi_lat
 target_roi_lat = input_roi_lat
 

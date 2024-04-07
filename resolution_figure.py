@@ -78,14 +78,14 @@ model_outputs_post = get_model_output('post', train_fractions, n_init, input,
 # Specify rectangles for resolution evaluation.
 # A different rectangle can be defined for axial and lateral direction,
 # as well as the input, model outputs and target images.
-input_roi_ax = Rectangle((65, 730), 11, 85)
+input_roi_ax = Rectangle((65, 360), 12, 55)
 models_roi_ax = input_roi_ax
 # Too much noise and too little signal over the area from wire for fair
 # comparison of target using same Rectangle as input with Gaussian fit
 # for resolution PSF estimation. Hence tailored ROI for target.
-target_roi_ax = Rectangle((68, 730), 6, 75)
+target_roi_ax = Rectangle((68, 360), 6, 55)
 
-input_roi_lat = Rectangle((65, 730), 11, 85)
+input_roi_lat = Rectangle((65, 360), 12, 55)
 models_roi_lat = input_roi_lat
 target_roi_lat = input_roi_lat
 
@@ -111,7 +111,7 @@ ax.set_ylabel('Axial FWHM [mm]')
 ax.set_xlabel('Number of training samples')
 ax.set_title('Axial FWHM for different number of training samples')
 ax.set_xlim(1, n_samples_train)
-ax.set_ylim(0.63, 1.23)
+ax.set_ylim(0.1, 0.73)
 
 fig, ax = make_figure(model_psfs_full[1], model_psfs_pre[1], model_psfs_post[1],
                       train_fractions=train_fractions, n_init=n_init,
@@ -124,43 +124,6 @@ ax.set_ylabel('Lateral FWHM [mm]')
 ax.set_xlabel('Number of training samples')
 ax.set_title('Lateral FWHM for different number of training samples')
 ax.set_xlim(1, n_samples_train)
-ax.set_ylim(0.66, 1.08)
-
-# No fit variant.
-model_psfs_full_nf = tuple(zip(*(eva.psf(model_img, models_roi_ax,
-                                         models_roi_lat, fit=False)
-                                 for model_img in model_outputs_full)))
-model_psfs_pre_nf = tuple(zip(*(eva.psf(model_img, models_roi_ax,
-                                        models_roi_lat, fit=False)
-                                for model_img in model_outputs_pre)))
-model_psfs_post_nf = tuple(zip(*(eva.psf(model_img, models_roi_ax,
-                                         models_roi_lat, fit=False)
-                                 for model_img in model_outputs_post)))
-
-fig, ax = make_figure(model_psfs_full_nf[0], model_psfs_pre_nf[0], model_psfs_post_nf[0],
-                      train_fractions=train_fractions, n_init=n_init,
-                      n_samples_train=n_samples_train,
-                      figure_type='fill_between')
-ax.axhline(y=input_psf[0], label='Input', ls='--', c='y')
-ax.axhline(y=target_psf[0], label='Target', ls='--', c='m')
-ax.legend(loc='lower left')
-ax.set_ylabel('Axial FWHM [mm]')
-ax.set_xlabel('Number of training samples')
-ax.set_title('No fit axial FWHM for different number of training samples')
-ax.set_xlim(1, n_samples_train)
-ax.set_ylim(0.20, 1.1)
-
-fig, ax = make_figure(model_psfs_full_nf[1], model_psfs_pre_nf[1], model_psfs_post_nf[1],
-                      train_fractions=train_fractions, n_init=n_init,
-                      n_samples_train=n_samples_train,
-                      figure_type='fill_between')
-ax.axhline(y=input_psf[1], label='Input', ls='--', c='y')
-ax.axhline(y=target_psf[1], label='Target', ls='--', c='m')
-ax.legend(loc='lower left')
-ax.set_ylabel('Lateral FWHM [mm]')
-ax.set_xlabel('Number of training samples')
-ax.set_title('No fit lateral FWHM for different number of training samples')
-ax.set_xlim(1, n_samples_train)
-ax.set_ylim(0.60, 1.25)
+ax.set_ylim(0.35, 1.15)
 
 plt.show()
