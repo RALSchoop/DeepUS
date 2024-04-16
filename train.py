@@ -24,11 +24,16 @@ data_root      = r'/export/scratch2/felix/Dropbox/Data/US/DeepUSData/'
 data_root      = r'/bigstore/felix/US/DeepUSData/'
 data_set       = 'CIRS073_RUMC'
 
-random_seeds   = range(9,11)
+# For each random seed specified below, the script will train the same network with different 
+# randomly chosen data samples and differently randomly initialized weights. This can be used to 
+# assess average performance of a particular network model and training data size
+random_seeds   = range(1,17)
 
+# choosing a value between 0 and 1 will determine the number of training samples used 
+# (1.0 = 176 training samples)
 train_fraction = 0.1
 
-# 'full', 'post', 'pre'
+# choose 'full' , 'post' or 'pre' (termed "complete", "post-processing", "pre-processing" in the paper)
 model_type     = 'full' 
 
 ################################################################################
