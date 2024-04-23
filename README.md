@@ -5,7 +5,7 @@ Ultrasound beamforming with end-to-end deep learning for single plane wave imagi
 Associated with this code is the dataset of 220 breast phantom samples and 40 calibration phantom samples. The data can be found on [Zenodo](https://zenodo.org/record/7986407).
 
 ## Usage
-This data and code is published with the aim to facilitate creation and validation of various algorithms on the same data. Use whichever components from this publication as it suits your needs. When you do please cite [TBD PAPER DOI].
+This data and code is published with the aim to facilitate creation and validation of various algorithms on the same data. Use whichever components from this publication as it suits your needs. When you do please cite our pre-print [arXiv:2404.14188](https://arxiv.org/abs/2404.14188).
 
 ### Preprocessing Data
 The data associated with this repository is raw ultrasound plane wave data of 75 angles. Image reconstruction and subsampling of the amount of angles can be done with the script `prepare_radboud_data_for_training.py`.
