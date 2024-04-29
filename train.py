@@ -21,7 +21,6 @@ from torchinfo import summary
 
 # Specify the root dataset folder here.
 data_root      = r'/export/scratch2/felix/Dropbox/Data/US/DeepUSData/'
-data_root      = r'/bigstore/felix/US/DeepUSData/'
 data_set       = 'CIRS073_RUMC'
 
 # For each random seed specified below, the script will train the same network with different 

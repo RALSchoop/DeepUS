@@ -24,7 +24,7 @@ data_set = 'CIRS073_RUMC' # Pick CIRS073_RUMC or CIRS040GSE
 experimental_data_path = join(storage_path, 'ExperimentalData', data_set)
 
 # This is where the training data will be stored.
-training_data_path_root = join(storage_path, 'TrainingDataPyGen', data_set)
+training_data_path_root = join(storage_path, 'TrainingData', data_set)
 
 # Settings for reconstruction
 # Sub-sampled number of steering angles used for reconstruction [1, ..., 75]
@@ -190,12 +190,26 @@ elif data_set == 'CIRS073_RUMC':
 else:
     raise ValueError("Unsupported data set code.")
 
-save_dict = {
-    '/USHEADER': md_usheader,
-    '/TargetInfo': {'nz_cutoff': nz_cutoff},
-    '/LesionIdx': lesion_idx
-}
+if n_ang_ss == 1:
+    # The deepus.py library currently only supports loading headers of
+    # one subsampled angle. If the metadata file has a USHEADER
+    # configuration of more than one angle then the deepus.py
+    # load_header function will fail. This condition will ensure only
+    # the case of one subsampled angle is saved.
 
-res_filename_metadata = join(training_data_path_root, 'metadata.mat')
-hdf5storage.writes(save_dict, res_filename_metadata,
-                   options=hdf5storage.Options(matlab_compatible=True))
+    md_usheader['xmitAngles'] = usheader.xmitAngles
+    # Indexing to get to the actual value stored in the data object.
+    md_usheader['xmitDelay'][0][0] = usheader.xmitDelay
+    md_usheader['xmitFocus'] = usheader.xmitFocus
+    md_usheader['xmitApodFunction'][0][0] = usheader.xmitApodFunction.astype(
+        np.float64)
+
+    save_dict = {
+        '/USHEADER': md_usheader,
+        '/TargetInfo': {'nz_cutoff': nz_cutoff},
+        '/LesionIdx': lesion_idx
+    }
+
+    res_filename_metadata = join(training_data_path_root, 'metadata.mat')
+    hdf5storage.writes(save_dict, res_filename_metadata,
+                    options=hdf5storage.Options(matlab_compatible=True))
